@@ -43,4 +43,4 @@ def _game_type_string_to_players(game_type_str):
 
 
 if __name__ == '__main__':
-    PlayGame('computer-human')
+    PlayGame('human-computer')

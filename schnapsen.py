@@ -235,27 +235,10 @@ class SchnapsenGameState(GameState):
 
         # If the next player has already played in this trick, then the trick is over.
         if any(True for (player, card) in self.currentTrick if player == self.playerToMove):
-            # Sort the plays in the trick:
-            # First, those that followed suit (in ascending rank order).
-            # Then, any trump plays (also in ascending rank order).
-            # The winning play is the last element in sortedPlays.
-            (leader, leadCard) = self.currentTrick[0]
-            suited_players = [
-                (player, card.score)
-                for (player, card) in self.currentTrick
-                if card.suit == leadCard.suit
-            ]
-            trump_plays = [
-                (player, card.score)
-                for (player, card) in self.currentTrick
-                if card.suit == self.trumpSuit
-            ]
-            sorted_plays = sorted(
-                suited_players, key=lambda player_score: player_score[1]
-            ) + sorted(trump_plays, key=lambda player_score: player_score[1])
-            trick_winner = sorted_plays[-1][0]
+            # Determine the winner.
+            trick_winner = self.GetTrickWinner(self.currentTrick)
 
-            # Update the game state
+            # Update the game state.
             self.pointsTaken[trick_winner] += sum(card.score for _, card in self.currentTrick)
             self.discards += [card for (player, card) in self.currentTrick]
             self.currentTrick = []
@@ -282,6 +265,33 @@ class SchnapsenGameState(GameState):
             # If the next player's hand is empty, the game is over.
             if self.playerHands[self.playerToMove] == []:
                 return
+
+    def GetTrickWinner(self, completed_trick):
+        """
+        Determine the winner of a trick in which all players have played.
+
+        Returns the winner as a player id.
+
+        Sort the plays in the trick:
+        First, those that followed suit (in ascending rank order).
+        Then, any trump plays (also in ascending rank order).
+        The winning play is the last element in sortedPlays.
+        """
+        (leader, leadCard) = completed_trick[0]
+        suited_plays = [
+            (player, card.score)
+            for (player, card) in completed_trick
+            if card.suit == leadCard.suit
+        ]
+        trump_plays = [
+            (player, card.score)
+            for (player, card) in completed_trick
+            if card.suit == self.trumpSuit
+        ]
+        sorted_plays = sorted(
+            suited_plays, key=lambda player_score: player_score[1]
+        ) + sorted(trump_plays, key=lambda player_score: player_score[1])
+        return sorted_plays[-1][0]
 
     def GetMoves(self):
         """Get all possible moves from this state."""
@@ -332,20 +342,21 @@ class SchnapsenGameState(GameState):
             # Talon is open and current player leads: anything goes, including marriages
             # and closing the talon.
             availablePlays = currentHand
-            moves = []
+            open_moves = []
+            close_moves = []
             for card in availablePlays:
                 marriage_partner = card.get_marriage_partner()
                 if (marriage_partner is not None) and (marriage_partner in availablePlays):
                     marriage_points = 20 + (20 * bool(card.suit == self.trumpSuit))
                 else:
                     marriage_points = None
-                for close_talon in [True, False]:
-                    moves.append(
-                        SchnapsenMove(
-                            card=card, close_talon=close_talon, marriage_points=marriage_points
-                        )
-                    )
-            return moves
+                open_moves.append(
+                    SchnapsenMove(card=card, close_talon=False, marriage_points=marriage_points)
+                )
+                close_moves.append(
+                    SchnapsenMove(card=card, close_talon=True, marriage_points=marriage_points)
+                )
+            return open_moves + close_moves
         else:
             # Talon is open and current player follows: any card is playable, but
             # not marriages or closing the talon.

@@ -36,8 +36,8 @@ def _game_type_string_to_players(game_type_str):
     """Convert a game type string (e.g., 'computer-human') to actual players."""
     player_strings = game_type_str.split('-')
     players = [
-        HumanPlayer() if string.lower() == 'human'
-        else ComputerPlayer() for string in player_strings
+        HumanPlayer(_id=idx + 1) if string.lower() == 'human' else ComputerPlayer(_id=idx + 1)
+        for idx, string in enumerate(player_strings)
     ]
     return {idx + 1: player for idx, player in enumerate(players)}
 

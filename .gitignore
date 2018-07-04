@@ -1,0 +1,36 @@
+# DS_Store
+*.DS_Store
+
+# Compiled python files
+*.py[cod]
+
+# iPython notebook backups
+.ipynb_checkpoints
+
+# iPython notebook cache
+models/notebooks/cache
+
+# ENV
+.env
+
+# Build
+dist
+web-app/frontend/dist/*
+
+# NPM
+node_modules
+**/node_modules/
+
+# idea
+.idea/
+
+# vscode
+*.vscode/*
+
+# Private Data
+data/private/*
+*.cache/*
+
+# Terraform local state
+**/.terraform/
+**/*.tfstate*

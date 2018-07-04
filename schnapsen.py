@@ -22,6 +22,7 @@ class Card(object):
     }
 
     def __init__(self, rank, suit):
+        """Initialize a playing card of the given rank and suit."""
         self.rank = rank
         self.suit = suit
         self.score = self.RANK_TO_SCORE_MAP[self.rank]
@@ -36,18 +37,23 @@ class Card(object):
             return None
 
     def __repr__(self):
+        """Represent a card as a string."""
         return "??23456789TJQKA"[self.rank] + self.suit
 
     def __eq__(self, other):
+        """Two cards are equal if they are equal in rank and suit."""
         return self.rank == other.rank and self.suit == other.suit
 
     def __ne__(self, other):
+        """Two cards are not equal if they differ in rank or suit."""
         return self.rank != other.rank or self.suit != other.suit
 
     def __copy__(self):
+        """Create a copy of the given card."""
         return Card(rank=self.rank, suit=self.suit)
 
     def __deepcopy__(self, memo):
+        """Create a deep copy of the given card."""
         return Card(rank=self.rank, suit=self.suit)
 
 
@@ -59,11 +65,17 @@ class SchnapsenMove(object):
     """
 
     def __init__(self, card, close_talon=False, marriage_points=None):
+        """
+        Initialize a move.
+
+        A move consists of a card, closing or not, and the number of marriage points.
+        """
         self.card = card
         self.close_talon = close_talon
         self.marriage_points = marriage_points
 
     def __repr__(self):
+        """Represent a move as a string."""
         res = ''
         if self.close_talon:
             res += 'Close + '
@@ -73,13 +85,16 @@ class SchnapsenMove(object):
         return res
 
     def __eq__(self, other):
+        """Two moves are equal if they are the same card and both close the talon or not."""
         return self.card == other.card and self.close_talon == other.close_talon
 
     def __ne__(self, other):
+        """Two moves are unequal if they are different cards or if only one closes the talon."""
         return self.card != other.card or self.close_talon != other.close_talon
 
 
 class SchnapsenGameState(GameState):
+    """A state of the game Schnapsen."""
 
     def __init__(self):
         """Initialize the game state."""

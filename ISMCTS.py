@@ -231,7 +231,6 @@ def ISMCTS(rootstate, itermax, verbose=False):
     # Output some information about the tree - can be omitted
     if (verbose):
         print(rootnode.TreeToString(0))
-    else:
         print(rootnode.ChildrenToString())
 
     return max(rootnode.childNodes, key=lambda c: c.visits).move   # return the most visited move

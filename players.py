@@ -13,7 +13,7 @@ class Player(object):
         """Initialize a player."""
         self._id = _id
 
-    def select_move(self, state):
+    def select_move(self, state, verbose=False):
         """Return a legal move in the game state (but do not make it)."""
         raise NotImplementedError
 
@@ -38,7 +38,7 @@ class Player(object):
 class ComputerPlayer(Player):
     """A player using the ISMCTS algorithm to make moves."""
 
-    def __init__(self, _id, itermax=3000):
+    def __init__(self, _id, itermax=8000):
         """
         Initialize an ISMCTS player.
 
@@ -50,9 +50,9 @@ class ComputerPlayer(Player):
         self.itermax = itermax
         self.type = 'computer'
 
-    def select_move(self, state):
+    def select_move(self, state, verbose=False):
         """Return a legal move in the game state (but do not make it)."""
-        return ISMCTS(rootstate=state, itermax=self.itermax, verbose=False)
+        return ISMCTS(rootstate=state, itermax=self.itermax, verbose=verbose)
 
 
 class HumanPlayer(Player):
@@ -63,7 +63,7 @@ class HumanPlayer(Player):
         super(HumanPlayer, self).__init__(_id=_id)
         self.type = 'human'
 
-    def select_move(self, state):
+    def select_move(self, state, verbose=False):
         """Return a legal move in the game state (but do not make it)."""
         available_moves = state.GetMoves()
 

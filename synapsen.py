@@ -19,7 +19,7 @@ def PlayGame(game_type='human-human'):
             print(state)
 
         # The current player selects a move.
-        move = player.select_move(state)
+        move = player.select_move(state, verbose=(game_type == 'computer-computer'))
         print('Player {} played {}!\n'.format(state.playerToMove, move))
         state.DoMove(move)
 
@@ -43,4 +43,4 @@ def _game_type_string_to_players(game_type_str):
 
 
 if __name__ == '__main__':
-    PlayGame('human-computer')
+    PlayGame('computer-computer')

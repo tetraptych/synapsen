@@ -79,8 +79,10 @@ class SchnapsenMove(object):
         res = ''
         if self.close_talon:
             res += 'Close + '
-        if self.marriage_points:
+        if self.marriage_points == 20:
             res += 'Marriage + '
+        if self.marriage_points == 40:
+            res += 'Royal Marriage + '
         res += self.card.__repr__()
         return res
 
@@ -107,6 +109,7 @@ class SchnapsenGameState(GameState):
         self.discards = []  # Stores the cards that have been played already in this round
         self.currentTrick = []
         self.trumpSuit = None
+        self.faceUpCard = None
         self.pointsTaken = {}  # Number of tricks taken by each player this round
         self.isTalonClosed = False
         self.whoClosedTalon = None
@@ -126,6 +129,7 @@ class SchnapsenGameState(GameState):
         st.discards = copy.deepcopy(self.discards)
         st.currentTrick = copy.deepcopy(self.currentTrick)
         st.trumpSuit = self.trumpSuit
+        st.faceUpCard = copy.deepcopy(self.faceUpCard)
         st.pointsTaken = copy.deepcopy(self.pointsTaken)
         st.isTalonClosed = self.isTalonClosed
         st.whoClosedTalon = self.whoClosedTalon
@@ -144,6 +148,9 @@ class SchnapsenGameState(GameState):
         # The observer can also remember the cards played in previous tricks.
         currentTrickCards = [card for (player, card) in st.currentTrick]
         seenCards = st.playerHands[observer] + st.discards + currentTrickCards
+        # The observer can remember the revealed bottom card.
+        if st.faceUpCard is not None and st.faceUpCard not in seenCards:
+            seenCards.append(st.faceUpCard)
         # The observer also knows about all declared marriages.
         marriagePartners = [
             card for p in st.players
@@ -162,6 +169,9 @@ class SchnapsenGameState(GameState):
             if p != observer:
                 # Deal cards to player p, accounting for revealed marriages.
                 playerHand = [card for card in st.marriageCardsRevealed[p]]
+                # If the deck is empty, someone must have the face-up card.
+                if len(st.deck) == 0 and st.faceUpCard not in st.playerHands[observer]:
+                    playerHand.append(st.faceUpCard)
                 numCardsToDeal = len(st.playerHands[p]) - len(playerHand)
                 playerHand += unseenCards[: numCardsToDeal]
                 st.playerHands[p] = [card for card in playerHand]
@@ -169,6 +179,10 @@ class SchnapsenGameState(GameState):
                 unseenCards = unseenCards[numCardsToDeal:]
 
         st.deck = unseenCards
+        # If there are cards left in the deck, the face-up card is on the bottom.
+        if len(st.deck) != 0:
+            st.deck += [st.faceUpCard]
+
         return st
 
     def GetCardDeck(self):
@@ -181,7 +195,7 @@ class SchnapsenGameState(GameState):
         self.currentTrick = []
         self.pointsTaken = {p: 0 for p in range(1, self.numberOfPlayers + 1)}
 
-        # Construct a deck, shuffle it, and deal it to the players
+        # Construct a deck, shuffle it, and deal it to the players.
         deck = self.GetCardDeck()
         random.shuffle(deck)
         for p in range(1, self.numberOfPlayers + 1):
@@ -191,7 +205,8 @@ class SchnapsenGameState(GameState):
         # Set the remaining cards to draw.
         self.deck = deck
         # Choose the trump suit for this round.
-        self.trumpSuit = random.choice(['C', 'D', 'H', 'S'])
+        self.faceUpCard = self.deck[-1]
+        self.trumpSuit = self.faceUpCard.suit
 
     def GetNextPlayer(self, p):
         """Return the player to the left of the specified player."""
@@ -246,12 +261,6 @@ class SchnapsenGameState(GameState):
 
             # Both players draw from deck if applicable.
             if not self.isTalonClosed:
-                if (self.marriageCardsRevealed[1] != [] and (len(self.deck) % 2 == 1)):
-                    print(self.marriageCardsRevealed[1])
-                    print('1: ' + str(len(self.deck)))
-                if (self.marriageCardsRevealed[2] != [] and (len(self.deck) % 2 == 1)):
-                    print(self.marriageCardsRevealed[2])
-                    print('2: ' + str(len(self.deck)))
                 # Winner takes the top card.
                 self.playerHands[trick_winner] += [self.deck[0]]
                 self.deck = self.deck[1:]
@@ -399,7 +408,8 @@ class SchnapsenGameState(GameState):
         result += ' | P%i: ' % self.playerToMove
         result += ','.join(str(card) for card in self.playerHands[self.playerToMove])
         result += ' | pointsTaken: %i' % self.pointsTaken[self.playerToMove]
-        result += ' | Trump: %s' % self.trumpSuit
+        result += ' | Trump suit: %s' % self.trumpSuit
+        result += ' | Face-up card: %s' % self.faceUpCard
         result += ' | Trick: ['
         result += ','.join(('%i:%s' % (player, card)) for (player, card) in self.currentTrick)
         result += ']'

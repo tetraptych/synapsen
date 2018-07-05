@@ -229,8 +229,9 @@ def ISMCTS(rootstate, itermax, verbose=False):
             node = node.parentNode
 
     # Output some information about the tree - can be omitted
-    if (verbose):
+    if verbose > 1.0:
         print(rootnode.TreeToString(0))
+    elif verbose:
         print(rootnode.ChildrenToString())
 
     return max(rootnode.childNodes, key=lambda c: c.visits).move   # return the most visited move

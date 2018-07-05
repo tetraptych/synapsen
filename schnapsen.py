@@ -64,7 +64,7 @@ class SchnapsenMove(object):
     A move consists of a decision to close the talon or not and a card to play.
     """
 
-    def __init__(self, card, close_talon=False, marriage_points=None):
+    def __init__(self, card, close_talon=False, marriage_points=None, exchange_first=False):
         """
         Initialize a move.
 
@@ -73,14 +73,19 @@ class SchnapsenMove(object):
         self.card = card
         self.close_talon = close_talon
         self.marriage_points = marriage_points
+        self.exchange_first = exchange_first
 
     def __repr__(self):
         """Represent a move as a string."""
         res = ''
+        if self.exchange_first:
+            res += 'Exchange + '
         if self.close_talon:
             res += 'Close + '
-        if self.marriage_points:
+        if self.marriage_points == 20:
             res += 'Marriage + '
+        if self.marriage_points == 40:
+            res += 'Royal Marriage + '
         res += self.card.__repr__()
         return res
 
@@ -107,6 +112,8 @@ class SchnapsenGameState(GameState):
         self.discards = []  # Stores the cards that have been played already in this round
         self.currentTrick = []
         self.trumpSuit = None
+        self.faceUpCard = None
+        self.exchangeMade = False
         self.pointsTaken = {}  # Number of tricks taken by each player this round
         self.isTalonClosed = False
         self.whoClosedTalon = None
@@ -126,6 +133,8 @@ class SchnapsenGameState(GameState):
         st.discards = copy.deepcopy(self.discards)
         st.currentTrick = copy.deepcopy(self.currentTrick)
         st.trumpSuit = self.trumpSuit
+        st.faceUpCard = copy.deepcopy(self.faceUpCard)
+        self.exchangeMade = self.exchangeMade
         st.pointsTaken = copy.deepcopy(self.pointsTaken)
         st.isTalonClosed = self.isTalonClosed
         st.whoClosedTalon = self.whoClosedTalon
@@ -144,6 +153,9 @@ class SchnapsenGameState(GameState):
         # The observer can also remember the cards played in previous tricks.
         currentTrickCards = [card for (player, card) in st.currentTrick]
         seenCards = st.playerHands[observer] + st.discards + currentTrickCards
+        # The observer also sees the face-up card that determines the trump suit.
+        if st.faceUpCard not in seenCards:
+            seenCards += [st.faceUpCard]
         # The observer also knows about all declared marriages.
         marriagePartners = [
             card for p in st.players
@@ -155,7 +167,6 @@ class SchnapsenGameState(GameState):
         unseenCards = [card for card in st.GetCardDeck() if card not in seenCards]
 
         assert(len(unseenCards) + len(seenCards) == len(st.GetCardDeck()))
-
         # Deal the unseen cards to the other players.
         random.shuffle(unseenCards)
         for p in st.players:
@@ -168,7 +179,8 @@ class SchnapsenGameState(GameState):
                 # Remove those cards from unseenCards.
                 unseenCards = unseenCards[numCardsToDeal:]
 
-        st.deck = unseenCards
+        # The deck consists of the unseen cards, plus the face-up card on the bottom.
+        st.deck = unseenCards + [st.faceUpCard]
         return st
 
     def GetCardDeck(self):
@@ -181,7 +193,7 @@ class SchnapsenGameState(GameState):
         self.currentTrick = []
         self.pointsTaken = {p: 0 for p in range(1, self.numberOfPlayers + 1)}
 
-        # Construct a deck, shuffle it, and deal it to the players
+        # Construct a deck, shuffle it, and deal it to the players.
         deck = self.GetCardDeck()
         random.shuffle(deck)
         for p in range(1, self.numberOfPlayers + 1):
@@ -191,7 +203,8 @@ class SchnapsenGameState(GameState):
         # Set the remaining cards to draw.
         self.deck = deck
         # Choose the trump suit for this round.
-        self.trumpSuit = random.choice(['C', 'D', 'H', 'S'])
+        self.faceUpCard = self.deck[-1]
+        self.trumpSuit = self.faceUpCard.suit
 
     def GetNextPlayer(self, p):
         """Return the player to the left of the specified player."""
@@ -203,6 +216,15 @@ class SchnapsenGameState(GameState):
 
         Must update playerToMove.
         """
+        # Place the jack of the trump suit at the bottom of the talon.
+        # FIXME: Why does this membership check fail?
+        if move.exchange_first:
+            self.playerHands[self.playerToMove].remove(Card(rank=11, suit=self.trumpSuit))
+            self.playerHands[self.playerToMove].append(self.faceUpCard)
+            self.faceUpCard = Card(rank=11, suit=self.trumpSuit)
+            self.deck = self.deck[:-1] + [Card(rank=11, suit=self.trumpSuit)]
+            self.exchangeMade = True
+
         # Close the talon if part of the current SchnapsenMove.
         if move.close_talon:
             self.isTalonClosed = True
@@ -214,11 +236,6 @@ class SchnapsenGameState(GameState):
             self.marriageCardsRevealed[self.playerToMove].append(
                 move.card.get_marriage_partner()
             )
-            # THIS BREAKS THINGS.
-            # # Remove the marriage partner from the deck if possible.
-            # if move.card.get_marriage_partner() in self.deck:
-            #     self.deck.remove(move.card.get_marriage_partner())
-
             # End game if the marriage puts the current player over 66 points.
             if self.pointsTaken[self.playerToMove] >= 66:
                 return
@@ -246,12 +263,6 @@ class SchnapsenGameState(GameState):
 
             # Both players draw from deck if applicable.
             if not self.isTalonClosed:
-                if (self.marriageCardsRevealed[1] != [] and (len(self.deck) % 2 == 1)):
-                    print(self.marriageCardsRevealed[1])
-                    print('1: ' + str(len(self.deck)))
-                if (self.marriageCardsRevealed[2] != [] and (len(self.deck) % 2 == 1)):
-                    print(self.marriageCardsRevealed[2])
-                    print('2: ' + str(len(self.deck)))
                 # Winner takes the top card.
                 self.playerHands[trick_winner] += [self.deck[0]]
                 self.deck = self.deck[1:]
@@ -295,7 +306,7 @@ class SchnapsenGameState(GameState):
 
     def GetMoves(self):
         """Get all possible moves from this state."""
-        currentHand = self.playerHands[self.playerToMove]
+        currentHand = copy.deepcopy(self.playerHands[self.playerToMove])
         currentPoints = self.pointsTaken[self.playerToMove]
         # If the current player has more than 66 points, the game is over.
         if currentPoints >= 66:
@@ -305,7 +316,7 @@ class SchnapsenGameState(GameState):
             # Talon is closed and current player leads.
             # Current player cannot close the talon, but can play any available marriages.
             if self.currentTrick == []:
-                availablePlays = self.playerHands[self.playerToMove]
+                availablePlays = currentHand
                 moves = []
                 for card in availablePlays:
                     marriage_partner = card.get_marriage_partner()
@@ -315,7 +326,9 @@ class SchnapsenGameState(GameState):
                         marriage_points = None
                     moves.append(
                         SchnapsenMove(
-                            card=card, close_talon=False, marriage_points=marriage_points
+                            card=card,
+                            close_talon=False,
+                            marriage_points=marriage_points
                         )
                     )
                 return moves
@@ -339,9 +352,19 @@ class SchnapsenGameState(GameState):
                     availablePlays = self.playerHands[self.playerToMove]
                 return [SchnapsenMove(card=card, close_talon=False) for card in availablePlays]
         elif self.currentTrick == []:
-            # Talon is open and current player leads: anything goes, including marriages
-            # and closing the talon.
+            # Talon is open and current player leads: anything goes, including marriages,
+            # closing the talon, and exchanging.
             availablePlays = currentHand
+            # If possible, exchange before making a move.
+            exchange_first = bool(
+                (not self.isTalonClosed) and
+                (not self.exchangeMade) and
+                (Card(rank=11, suit=self.trumpSuit) in currentHand)
+            )
+            if exchange_first:
+                availablePlays.remove(Card(rank=11, suit=self.trumpSuit))
+                availablePlays.append(self.faceUpCard)
+
             open_moves = []
             close_moves = []
             for card in availablePlays:
@@ -351,15 +374,25 @@ class SchnapsenGameState(GameState):
                 else:
                     marriage_points = None
                 open_moves.append(
-                    SchnapsenMove(card=card, close_talon=False, marriage_points=marriage_points)
+                    SchnapsenMove(
+                        card=card,
+                        close_talon=False,
+                        marriage_points=marriage_points,
+                        exchange_first=exchange_first
+                    )
                 )
                 close_moves.append(
-                    SchnapsenMove(card=card, close_talon=True, marriage_points=marriage_points)
+                    SchnapsenMove(
+                        card=card,
+                        close_talon=True,
+                        marriage_points=marriage_points,
+                        exchange_first=exchange_first
+                    )
                 )
             return open_moves + close_moves
         else:
             # Talon is open and current player follows: any card is playable, but
-            # not marriages or closing the talon.
+            # not marriages, closing the talon, or exchanges.
             availablePlays = currentHand
             return [SchnapsenMove(card=card, close_talon=False) for card in availablePlays]
 
@@ -399,7 +432,7 @@ class SchnapsenGameState(GameState):
         result += ' | P%i: ' % self.playerToMove
         result += ','.join(str(card) for card in self.playerHands[self.playerToMove])
         result += ' | pointsTaken: %i' % self.pointsTaken[self.playerToMove]
-        result += ' | Trump: %s' % self.trumpSuit
+        result += ' | Trump card: %s' % self.faceUpCard
         result += ' | Trick: ['
         result += ','.join(('%i:%s' % (player, card)) for (player, card) in self.currentTrick)
         result += ']'

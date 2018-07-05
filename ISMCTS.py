@@ -86,7 +86,7 @@ class Node:
 
     def __init__(
             self, move=None, parent=None, playerJustMoved=None,
-            isTalonClosed=False, whoClosedTalon=None
+            isTalonClosed=False, whoClosedTalon=None, exchangeMade=False
     ):
         self.move = move  # the move that got us to this node - "None" for the root node
         self.parentNode = parent  # "None" for the root node
@@ -97,6 +97,7 @@ class Node:
         self.playerJustMoved = playerJustMoved  # part of the state that the Node needs later
         self.isTalonClosed = isTalonClosed  # part of the state that the Node needs later
         self.whoClosedTalon = whoClosedTalon    # part of the state that the Node needs later
+        self.exchangeMade = exchangeMade    # part of the state that the Node needs later
 
     def GetUntriedMoves(self, legalMoves):
         """Return the elements of legalMoves for which this node does not have children."""
@@ -117,7 +118,8 @@ class Node:
         s = max(
             legalChildren,
             key=lambda c:
-                float(c.wins) / float(c.visits) + exploration * math.sqrt(math.log(c.avails) / float(c.visits))
+                float(c.wins) / float(c.visits) +
+                exploration * math.sqrt(math.log(c.avails) / float(c.visits))
         )
         # Update availability counts -- it is easier to do this now than during backpropagation
         for child in legalChildren:
@@ -126,14 +128,14 @@ class Node:
         # Return the child selected above
         return s
 
-    def AddChild(self, m, p, isTalonClosed, whoClosedTalon):
+    def AddChild(self, m, p):
         """
         Add a new child node for the move m.
 
         Return the added child node.
         """
-        if whoClosedTalon is not None:
-            w = whoClosedTalon
+        if self.whoClosedTalon is not None:
+            w = self.whoClosedTalon
         elif m.close_talon:
             w = p
         else:
@@ -143,8 +145,9 @@ class Node:
             move=m,
             parent=self,
             playerJustMoved=p,
-            isTalonClosed=isTalonClosed or m.close_talon,
-            whoClosedTalon=w
+            isTalonClosed=self.isTalonClosed or m.close_talon,
+            whoClosedTalon=w,
+            exchangeMade=self.exchangeMade or m.exchange_first
         )
         self.childNodes.append(n)
         return n
@@ -154,7 +157,7 @@ class Node:
         Update this node.
 
         1. Increment the visit count by one.
-        2. increase the win count by the result of terminalState for self.playerJustMoved.
+        2. Increase the win count by the result of terminalState for self.playerJustMoved.
         """
         self.visits += 1
         if self.playerJustMoved is not None:
@@ -212,10 +215,7 @@ def ISMCTS(rootstate, itermax, verbose=False):
             m = random.choice(untriedMoves)
             player = state.playerToMove
             state.DoMove(m)
-            node = node.AddChild(
-                m=m, p=player, isTalonClosed=state.isTalonClosed,
-                whoClosedTalon=state.whoClosedTalon
-            )  # add child and descend tree
+            node = node.AddChild(m=m, p=player)  # add child and descend tree
 
         # Simulate
         while state.GetMoves() != []:  # while state is non-terminal
@@ -229,8 +229,9 @@ def ISMCTS(rootstate, itermax, verbose=False):
             node = node.parentNode
 
     # Output some information about the tree - can be omitted
-    if (verbose):
+    if verbose > 1:
         print(rootnode.TreeToString(0))
+    elif verbose:
         print(rootnode.ChildrenToString())
 
     return max(rootnode.childNodes, key=lambda c: c.visits).move   # return the most visited move

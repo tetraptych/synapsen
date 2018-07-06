@@ -171,7 +171,10 @@ class SchnapsenGameState(GameState):
                 playerHand = [card for card in st.marriageCardsRevealed[p]]
                 # If the deck is empty, someone must have the face-up card.
                 if len(st.deck) == 0 and st.faceUpCard not in st.playerHands[observer]:
-                    playerHand.append(st.faceUpCard)
+                    # If the observer doesn't have it and it hasn't been played yet,
+                    # the other player must have it.
+                    if st.faceUpCard not in (st.discards + currentTrickCards):
+                        playerHand.append(st.faceUpCard)
                 numCardsToDeal = len(st.playerHands[p]) - len(playerHand)
                 playerHand += unseenCards[: numCardsToDeal]
                 st.playerHands[p] = [card for card in playerHand]

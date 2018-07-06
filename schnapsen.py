@@ -21,6 +21,8 @@ class Card(object):
         14: 11
     }
 
+    RANK_TO_REPR_MAP = dict(enumerate('??23456789TJQKA'))
+
     def __init__(self, rank, suit):
         """Initialize a playing card of the given rank and suit."""
         self.rank = rank
@@ -38,7 +40,11 @@ class Card(object):
 
     def __repr__(self):
         """Represent a card as a string."""
-        return "??23456789TJQKA"[self.rank] + self.suit
+        return self.RANK_TO_REPR_MAP[self.rank] + self.suit
+
+    def __hash__(self):
+        """A card's representation is an immutable, unique identifier."""
+        return hash(self.__repr__())
 
     def __eq__(self, other):
         """Two cards are equal if they are equal in rank and suit."""
@@ -104,7 +110,8 @@ class SchnapsenGameState(GameState):
         self.players = [1, 2]
         self.playerToMove = 1
         self.playerHands = {p: [] for p in self.players}
-        self.marriageCardsRevealed = {p: [] for p in self.players}
+        self.marriageCardsRevealed = {p: set() for p in self.players}
+        self.knownEmptySuits = {p: set() for p in self.players}
         self.handSize = 5
         self.discards = []  # Stores the cards that have been played already in this round
         self.currentTrick = []
@@ -125,6 +132,7 @@ class SchnapsenGameState(GameState):
         st.playerToMove = self.playerToMove
         st.playerHands = copy.deepcopy(self.playerHands)
         st.marriageCardsRevealed = copy.deepcopy(self.marriageCardsRevealed)
+        st.knownEmptySuits = copy.deepcopy(self.knownEmptySuits)
         st.handSize = self.handSize
         st.discards = copy.deepcopy(self.discards)
         st.currentTrick = copy.deepcopy(self.currentTrick)
@@ -152,12 +160,19 @@ class SchnapsenGameState(GameState):
         if st.faceUpCard is not None and st.faceUpCard not in seenCards:
             seenCards.append(st.faceUpCard)
         # The observer also knows about all declared marriages.
-        marriagePartners = [
+        seenCards += [
             card for p in st.players
             for card in st.marriageCardsRevealed[p]
             if (p != observer and card not in currentTrickCards)
         ]
-        seenCards += marriagePartners
+        # The observer also knows about any empty suits the other player has.
+        seenCards += [
+            card
+            for suit in st.knownEmptySuits[st.GetNextPlayer(observer)]
+            for card in [Card(rank=rank, suit=suit) for rank in range(10, 14)]
+            if card not in seenCards
+        ]
+
         # The observer can't see the rest of the deck.
         unseenCards = [card for card in st.GetCardDeck() if card not in seenCards]
 
@@ -229,7 +244,7 @@ class SchnapsenGameState(GameState):
         # Check for marriages, updating known information about the game state.
         if move.marriage_points is not None:
             self.pointsTaken[self.playerToMove] += move.marriage_points
-            self.marriageCardsRevealed[self.playerToMove].append(
+            self.marriageCardsRevealed[self.playerToMove].add(
                 move.card.get_marriage_partner()
             )
             # THIS BREAKS THINGS.
@@ -245,14 +260,26 @@ class SchnapsenGameState(GameState):
         self.currentTrick.append((self.playerToMove, move.card))
         # Remove the card from the player's hand.
         self.playerHands[self.playerToMove].remove(move.card)
+
         # If applicable, remove the card from the current player's revealed marriage cards.
         if move.card in self.marriageCardsRevealed[self.playerToMove]:
             self.marriageCardsRevealed[self.playerToMove].remove(move.card)
+
+        # If the talon is closed and the current trick is over, record empty suits.
+        if self.isTalonClosed and len(self.currentTrick) == 2:
+            suits = [card.suit for _, card in self.currentTrick]
+            # If the suits were different, the second player must be missing the lead suit.
+            if suits[0] != suits[1]:
+                self.knownEmptySuits[self.playerToMove].add(suits[0])
+                # If additionally neither suit was trump, the second player is out of trump.
+                if (suits[0] != self.trumpSuit) and (suits[1] != self.trumpSuit):
+                    self.knownEmptySuits[self.playerToMove].add(self.trumpSuit)
+
         # Find the next player.
         self.playerToMove = self.GetNextPlayer(self.playerToMove)
 
-        # If the next player has already played in this trick, then the trick is over.
-        if any(True for (player, card) in self.currentTrick if player == self.playerToMove):
+        # If both players have played, then the trick is over.
+        if len(self.currentTrick) == 2:
             # Determine the winner.
             trick_winner = self.GetTrickWinner(self.currentTrick)
 
@@ -419,4 +446,6 @@ class SchnapsenGameState(GameState):
         result += ','.join(('%i:%s' % (player, card)) for (player, card) in self.currentTrick)
         result += ']'
         result += ' | Cards left: {}'.format(len(self.deck))
+        result += ' | ' + ', '.join(
+            ['P{}: {}'.format(player, self.knownEmptySuits[player]) for player in self.players])
         return result

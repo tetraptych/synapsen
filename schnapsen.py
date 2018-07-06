@@ -410,7 +410,9 @@ class SchnapsenGameState(GameState):
             result = 'Talon open'
         result += ' | P%i: ' % self.playerToMove
         result += ','.join(str(card) for card in self.playerHands[self.playerToMove])
-        result += ' | pointsTaken: %i' % self.pointsTaken[self.playerToMove]
+        result += ' | pointsTaken: '
+        result += ', '.join(
+            ['P{}: {}'.format(player, self.pointsTaken[player]) for player in self.players])
         result += ' | Trump suit: %s' % self.trumpSuit
         result += ' | Face-up card: %s' % self.faceUpCard
         result += ' | Trick: ['

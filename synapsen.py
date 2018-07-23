@@ -5,6 +5,7 @@ from players import ComputerPlayer, HumanPlayer
 from schnapsen import SchnapsenGameState
 
 DIFFICULTY_TO_ITERMAX_MAP = {
+    'trivial': 1,   # For testing purposes only!
     'easy': 500,
     'medium': 5 * 10**3,
     'hard': 10**4,

@@ -30,6 +30,8 @@ node_modules
 # Private Data
 data/private/*
 *.cache/*
+.pytest_cache/*
+.coverage
 
 # Terraform local state
 **/.terraform/

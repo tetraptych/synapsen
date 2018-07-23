@@ -1,4 +1,4 @@
-## Synapsen
+## Synapsen [![Build Status](https://travis-ci.org/tetraptych/synapsen.svg?branch=master)](https://travis-ci.org/tetraptych/synapsen) [![Coverage Status](https://coveralls.io/repos/github/tetraptych/synapsen/badge.svg?branch=master)](https://coveralls.io/github/tetraptych/synapsen?branch=master)
 
 Synapsen is a stand-alone, command-line implementation of the classic card game [Schnapsen](https://en.wikipedia.org/wiki/Schnapsen). The computer players use an [Information Set Monte Carlo Tree Search (ISMCTS)](http://www.aifactory.co.uk/newsletter/2013_01_reduce_burden.htm) algorithm to determine [satisficing](https://en.wikipedia.org/wiki/Satisficing) moves.
 
@@ -37,7 +37,7 @@ optional arguments:
 
 ### Etymology
 
-"Synapsen" means _synapses_ in German.
+"Synapsen" means _synapses_ in German -- a happy coincidence.
 
 
 ### Limitations

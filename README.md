@@ -37,7 +37,7 @@ optional arguments:
 
 ### Etymology
 
-"Synapsen" means _synapses_ in German -- a happy coincidence.
+"Synapsen" means _synapses_ in German &mdash; a happy coincidence.
 
 
 ### Limitations

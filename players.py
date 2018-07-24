@@ -66,15 +66,18 @@ class HumanPlayer(Player):
     def select_move(self, state, verbose=False):
         """Return a legal move in the game state (but do not make it)."""
         available_moves = state.GetMoves()
-
         valid_move = False
-        while valid_move is False:
-            move_idx = input('Enter your move (1 to {}): '.format(len(available_moves)))
+
+        while not valid_move:
             try:
-                move = available_moves[int(move_idx) - 1]
+                move_idx = int(input('Enter your move (1 to {}): '.format(len(available_moves))))
+                assert (move_idx - 1 >= 0)
+                move = available_moves[move_idx - 1]
                 valid_move = True
-            except (TypeError, IndexError):
-                print('Index must be between 1 and {}!'.format(len(available_moves)))
+            except (ValueError, TypeError, IndexError, AssertionError):
+                print('Move index must be an integer bewteen 1 and {}!'.format(
+                    len(available_moves))
+                )
                 valid_move = False
 
         return move

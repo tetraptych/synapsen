@@ -97,5 +97,5 @@ def _get_arguments():
 
 if __name__ == '__main__':
     arguments = _get_arguments()
-    print(arguments)
+    print('Game arguments are {}'.format(arguments))
     PlayGame(**arguments)

@@ -5,10 +5,10 @@ import random
 from ISMCTS import GameState
 
 SUIT_TO_UNICODE_MAP = {
-    'S': u'♠️',
-    'H': u'♥️',
-    'C': u'♣️',
-    'D': u'♦️',
+    'S': u'♠️ ',
+    'H': u'♥️ ',
+    'C': u'♣️ ',
+    'D': u'♦️ ',
 }
 
 
@@ -443,20 +443,21 @@ class SchnapsenGameState(GameState):
         else:
             result = 'Talon open'
         result += ' | P%i: ' % self.playerToMove
-        result += ' , '.join(str(card) for card in self.playerHands[self.playerToMove])
+        result += ', '.join(str(card) for card in self.playerHands[self.playerToMove])
         result += '  | pointsTaken: '
         result += ', '.join(
             ['P{}: {}'.format(player, self.pointsTaken[player]) for player in self.players])
-        result += ' | Trump suit: %s ' % SUIT_TO_UNICODE_MAP[self.trumpSuit]
-        result += ' | Face-up card: %s ' % self.faceUpCard
+        result += ' | Trump suit: %s' % SUIT_TO_UNICODE_MAP[self.trumpSuit]
+        result += ' | Face-up card: %s' % self.faceUpCard
         result += ' | Trick: ['
-        result += ', '.join(('%i:%s' % (player, card)) for (player, card) in self.currentTrick)
+        result += ', '.join((' %i: %s' % (player, card)) for (player, card) in self.currentTrick)
         result += ']'
         result += ' | Cards left: {}'.format(len(self.deck))
-        result += ' | ' + ', '.join(
+        result += ' | Empty: ' + ', '.join(
             [
                 'P{}: {}'.format(
-                    player, [SUIT_TO_UNICODE_MAP[suit] for suit in self.knownEmptySuits[player]]
+                    player,
+                    ', '.join([SUIT_TO_UNICODE_MAP[suit] for suit in self.knownEmptySuits[player]])
                 )
                 for player in self.players
             ])

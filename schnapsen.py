@@ -4,6 +4,13 @@ import random
 
 from ISMCTS import GameState
 
+SUIT_TO_UNICODE_MAP = {
+    'S': u'♠️',
+    'H': u'♥️',
+    'C': u'♣️',
+    'D': u'♦️',
+}
+
 
 class Card(object):
     """
@@ -40,7 +47,7 @@ class Card(object):
 
     def __repr__(self):
         """Represent a card as a string."""
-        return self.RANK_TO_REPR_MAP[self.rank] + self.suit
+        return self.RANK_TO_REPR_MAP[self.rank] + SUIT_TO_UNICODE_MAP[self.suit]
 
     def __hash__(self):
         """A card's representation is an immutable, unique identifier."""
@@ -436,16 +443,21 @@ class SchnapsenGameState(GameState):
         else:
             result = 'Talon open'
         result += ' | P%i: ' % self.playerToMove
-        result += ','.join(str(card) for card in self.playerHands[self.playerToMove])
-        result += ' | pointsTaken: '
+        result += ' , '.join(str(card) for card in self.playerHands[self.playerToMove])
+        result += '  | pointsTaken: '
         result += ', '.join(
             ['P{}: {}'.format(player, self.pointsTaken[player]) for player in self.players])
-        result += ' | Trump suit: %s' % self.trumpSuit
-        result += ' | Face-up card: %s' % self.faceUpCard
+        result += ' | Trump suit: %s ' % SUIT_TO_UNICODE_MAP[self.trumpSuit]
+        result += ' | Face-up card: %s ' % self.faceUpCard
         result += ' | Trick: ['
-        result += ','.join(('%i:%s' % (player, card)) for (player, card) in self.currentTrick)
+        result += ', '.join(('%i:%s' % (player, card)) for (player, card) in self.currentTrick)
         result += ']'
         result += ' | Cards left: {}'.format(len(self.deck))
         result += ' | ' + ', '.join(
-            ['P{}: {}'.format(player, self.knownEmptySuits[player]) for player in self.players])
+            [
+                'P{}: {}'.format(
+                    player, [SUIT_TO_UNICODE_MAP[suit] for suit in self.knownEmptySuits[player]]
+                )
+                for player in self.players
+            ])
         return result

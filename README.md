@@ -4,6 +4,9 @@ Synapsen is a stand-alone, command-line implementation of the classic card game 
 
 Synapsen is written in Python and requires Python3 or higher.
 
+### Demonstration
+
+![](assets/demo.gif)
 
 ### Usage
 
@@ -39,8 +42,7 @@ optional arguments:
 
 "Synapsen" means _synapses_ in German &mdash; a happy coincidence.
 
-
 ### Limitations
 
-- Trading the Jack of the trump suit for the face-up trump card is not yet implemented.
+- Trading the jack of the trump suit for the face-up trump card is not yet implemented.
 - Computer players do not explicitly infer the highest remaining card their opponent has in a particular suit when the talon is closed. For example, if the computer player led with the king of spades and the opponent played the queen of spades, the computer _would not_ infer that the opponent cannot have the ten or ace of spades. Computer players _do_ infer when their opponent has no cards left of a particular suit when the talon is closed: if the opponent responds to the king of spades with any non-spade card, the computer player understands that the opponent has no spades in hand.

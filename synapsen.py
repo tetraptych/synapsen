@@ -9,20 +9,23 @@ DIFFICULTY_TO_ITERMAX_MAP = {
     'easy': 500,
     'medium': 5 * 10**3,
     'hard': 10**4,
-    'insane': 2 * 10**4
+    'insane': 10**4
 }
 
 
 def PlayGame(**kwargs):
     """Play a game between two players."""
-    state = SchnapsenGameState()
-    player_by_index = _kwargs_to_players(**kwargs)
-
+    players_by_index = _kwargs_to_players(**kwargs)
     game_type = kwargs['game_type']
+
+    omniscient_players = {
+        idx for idx in players_by_index if players_by_index[idx].is_omniscient
+    }
+    state = SchnapsenGameState(omniscient_players=omniscient_players)
 
     while (state.GetMoves() != []):
         # Get the current player.
-        player = player_by_index[state.playerToMove]
+        player = players_by_index[state.playerToMove]
         # Only show the part of the game state visible to human players.
         if player.type == 'human':
             print(player.survey_game_state(state))
@@ -47,12 +50,27 @@ def PlayGame(**kwargs):
 def _kwargs_to_players(**kwargs):
     """Convert a game type string (e.g., 'computer-human') to actual players."""
     player_strings = kwargs['game_type'].split('-')
-    players = [
-        HumanPlayer(_id=idx + 1)
-        if string.lower() == 'human'
-        else ComputerPlayer(_id=idx + 1, itermax=DIFFICULTY_TO_ITERMAX_MAP[kwargs['difficulty']])
-        for idx, string in enumerate(player_strings)
-    ]
+
+    players = []
+    for idx, string in enumerate(player_strings):
+        if string == 'human':
+            player = HumanPlayer(_id=idx + 1)
+        elif idx == 0 or not kwargs.get('difficulty2'):
+            # If only one difficulty is specified, use it for all computer players.
+            player = ComputerPlayer(
+                _id=idx + 1,
+                itermax=DIFFICULTY_TO_ITERMAX_MAP[kwargs['difficulty']],
+                is_omniscient=(kwargs['difficulty'] == 'insane')
+            )
+        else:
+            # If multiple difficulties are specified, use the second for the second computer player.
+            player = ComputerPlayer(
+                _id=idx + 1,
+                itermax=DIFFICULTY_TO_ITERMAX_MAP[kwargs['difficulty2']],
+                is_omniscient=(kwargs['difficulty2'] == 'insane')
+            )
+        players.append(player)
+
     return {idx + 1: player for idx, player in enumerate(players)}
 
 
@@ -79,7 +97,7 @@ def _get_arguments():
     parser.add_argument(
         '-d', '--difficulty',
         help="""
-            The difficulty of any computer players in the game.
+            The difficulty of the first computer player in the game.
 
             Available options are:
                 - easy
@@ -89,6 +107,21 @@ def _get_arguments():
         """.strip(),
         required=False,
         default='medium',
+        type=str
+    )
+
+    parser.add_argument(
+        '-d2', '--difficulty2',
+        help="""
+            The difficulty of the second computer player (optional).
+
+            Available options are:
+                - easy
+                - medium
+                - hard
+                - insane
+        """.strip(),
+        required=False,
         type=str
     )
 

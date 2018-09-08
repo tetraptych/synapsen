@@ -111,10 +111,11 @@ class SchnapsenMove(object):
 class SchnapsenGameState(GameState):
     """A state of the game Schnapsen."""
 
-    def __init__(self):
+    def __init__(self, omniscient_players=set()):
         """Initialize the game state."""
         self.numberOfPlayers = 2
         self.players = [1, 2]
+        self.omniscient_players = omniscient_players
         self.playerToMove = 1
         self.playerHands = {p: [] for p in self.players}
         self.marriageCardsRevealed = {p: set() for p in self.players}
@@ -133,7 +134,7 @@ class SchnapsenGameState(GameState):
 
     def Clone(self):
         """Create a deep clone of this game state."""
-        st = SchnapsenGameState()
+        st = SchnapsenGameState(self.omniscient_players)
         st.players = self.players
         st.numberOfPlayers = self.numberOfPlayers
         st.playerToMove = self.playerToMove
@@ -159,6 +160,10 @@ class SchnapsenGameState(GameState):
         All information not visible to the specified observer player is randomized.
         """
         st = self.Clone()
+        # If the observer is omniscient, do not randomize.
+        if observer in self.omniscient_players:
+            return st
+
         # The observer can see its own hand and the cards in the current trick.
         # The observer can also remember the cards played in previous tricks.
         currentTrickCards = [card for (player, card) in st.currentTrick]
@@ -462,3 +467,7 @@ class SchnapsenGameState(GameState):
                 for player in self.players
             ])
         return result
+
+    def deep_repr(self):
+        """A representation of all information in the game state from an omniscient POV."""
+        return self.__repr__() + '\nDeck: ' + ', '.join([card.__repr__() for card in self.deck])

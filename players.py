@@ -12,6 +12,8 @@ class Player(object):
     def __init__(self, _id):
         """Initialize a player."""
         self._id = _id
+        self.type = None
+        self.is_omniscient = None
 
     def select_move(self, state, verbose=False):
         """Return a legal move in the game state (but do not make it)."""
@@ -38,7 +40,7 @@ class Player(object):
 class ComputerPlayer(Player):
     """A player using the ISMCTS algorithm to make moves."""
 
-    def __init__(self, _id, itermax=3000):
+    def __init__(self, _id, itermax=3000, is_omniscient=False):
         """
         Initialize an ISMCTS player.
 
@@ -49,6 +51,7 @@ class ComputerPlayer(Player):
         super(ComputerPlayer, self).__init__(_id=_id)
         self.itermax = itermax
         self.type = 'computer'
+        self.is_omniscient = is_omniscient
 
     def select_move(self, state, verbose=False):
         """Return a legal move in the game state (but do not make it)."""
@@ -62,6 +65,7 @@ class HumanPlayer(Player):
         """Initialize a human player."""
         super(HumanPlayer, self).__init__(_id=_id)
         self.type = 'human'
+        self.is_omniscient = False
 
     def select_move(self, state, verbose=False):
         """Return a legal move in the game state (but do not make it)."""

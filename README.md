@@ -16,7 +16,7 @@ Run `python3 synapsen.py --game-type 'human-computer' --difficulty 'easy'` to be
 
 The command-line arguments can be configured as follows:
 ```
-usage: synapsen.py [-h] [-gt GAME_TYPE] [-d DIFFICULTY]
+usage: synapsen.py [-h] [-gt GAME_TYPE] [-d DIFFICULTY] [-d2 DIFFICULTY2]
 
 This begins a game of Schnapsen.
 
@@ -30,13 +30,22 @@ optional arguments:
                             - computer-computer
                             - computer-human
   -d DIFFICULTY, --difficulty DIFFICULTY
-                        The difficulty of any computer players in the game.
+                        The difficulty of the first computer player in the
+                        game. Available options are:
+                            - easy
+                            - medium
+                            - hard
+                            - insane
+  -d2 DIFFICULTY2, --difficulty2 DIFFICULTY2
+                        The difficulty of the second computer player (optional).
                         Available options are:
                             - easy
                             - medium
                             - hard
                             - insane
 ```
+
+`Insane` difficulty computer players cheat at the game &mdash; they know exactly where every card is. Accordingly, such players may intentionally lose tricks in order to pick up a better card from the talon. They may also close the talon very early on, capitalizing on the knowledge that their opponent lacks the right cards to succesfully take a trick.
 
 ### Etymology
 

@@ -23,6 +23,42 @@ import math
 import random
 
 
+# Strategy to function mapping.
+VALUATION_FUNCTIONS = {
+    'id': {
+        'function': lambda x: x,
+        'min': -3.0,
+        'max': 3.0,
+    },
+    'win': {
+        'function': lambda x: float(x > 0.0),
+        'min': 0.0,
+        'max': 1.0,
+    },
+    'get_at_least_2': {
+        'function': lambda x: float(x >= 2.0),
+        'min': 0.0,
+        'max': 1.0,
+    },
+    'get_at_least_3': {
+        'function': lambda x: float(x >= 3.0),
+        'min': 0.0,
+        'max': 1.0,
+    },
+    'prevent_other_player_from_getting_2': {
+        'function': lambda x: float(x > -2.0),
+        'min': 0.0,
+        'max': 1.0,
+    },
+    'prevent_other_player_from_getting_3': {
+        'function': lambda x: float(x > -3.0),
+        'min': 0.0,
+        'max': 1.0,
+    },
+
+}
+
+
 class GameState:
     """
     A state of the game, i.e. the game board.
@@ -86,9 +122,10 @@ class Node:
 
     def __init__(
             self, move=None, parent=None, playerJustMoved=None,
-            isTalonClosed=False, whoClosedTalon=None
+            isTalonClosed=False, whoClosedTalon=None, strategy='id'
     ):
         self.move = move  # the move that got us to this node - "None" for the root node
+        self.strategy = strategy
         self.parentNode = parent  # "None" for the root node
         self.childNodes = []
         self.wins = 0
@@ -97,6 +134,9 @@ class Node:
         self.playerJustMoved = playerJustMoved  # part of the state that the Node needs later
         self.isTalonClosed = isTalonClosed  # part of the state that the Node needs later
         self.whoClosedTalon = whoClosedTalon    # part of the state that the Node needs later
+        self.valuation_function = VALUATION_FUNCTIONS[self.strategy]['function']
+        self._min_value = VALUATION_FUNCTIONS[self.strategy]['min']
+        self._max_value = VALUATION_FUNCTIONS[self.strategy]['max']
 
     def GetUntriedMoves(self, legalMoves):
         """Return the elements of legalMoves for which this node does not have children."""
@@ -105,7 +145,7 @@ class Node:
         # Return all moves that are legal but have not been tried yet
         return [move for move in legalMoves if move not in triedMoves]
 
-    def UCBSelectChild(self, legalMoves, exploration=0.7):
+    def UCBSelectChild(self, legalMoves, exploration=0.8):
         """
         Use the UCB1 formula to select a child node, filtered by the given list of legal moves.
 
@@ -113,11 +153,15 @@ class Node:
         """
         # Filter the list of children by the list of legal moves
         legalChildren = [child for child in self.childNodes if child.move in legalMoves]
-        # Get the child with the highest UCB score
+        # Get the child with the highest UCB score.
+        # Rescale wins / visits to the range [0, 1] in case the valuation function doesn't.
         s = max(
             legalChildren,
             key=lambda c:
-                float(c.wins) / float(c.visits) + exploration * math.sqrt(math.log(c.avails) / float(c.visits))
+                (
+                    float(c.wins) / float(c.visits) - self._min_value
+                ) / (self._max_value - self._min_value) +
+                exploration * math.sqrt(math.log(c.avails) / float(c.visits))
         )
         # Update availability counts -- it is easier to do this now than during backpropagation
         for child in legalChildren:
@@ -144,7 +188,8 @@ class Node:
             parent=self,
             playerJustMoved=p,
             isTalonClosed=isTalonClosed or m.close_talon,
-            whoClosedTalon=w
+            whoClosedTalon=w,
+            strategy=self.strategy
         )
         self.childNodes.append(n)
         return n
@@ -158,11 +203,17 @@ class Node:
         """
         self.visits += 1
         if self.playerJustMoved is not None:
-            self.wins += terminalState.GetResult(self.playerJustMoved)
+            self.wins += self.valuation_function(terminalState.GetResult(self.playerJustMoved))
 
     def __repr__(self):
         """Represent a node as a string."""
-        return "[M:%s W/V/A: %4i/%4i/%4i]" % (self.move, self.wins, self.visits, self.avails)
+        return '[M:{} E/W/V/A: {:.3f} / {:.2f} / {:6d} / {:6d}]'.format(
+            str(self.move).ljust(20),
+            (self.wins / self.visits),
+            self.wins,
+            self.visits,
+            self.avails,
+        )
 
     def TreeToString(self, indent):
         """Represent the tree as a string for debugging purposes."""
@@ -186,13 +237,13 @@ class Node:
         return s
 
 
-def ISMCTS(rootstate, itermax, verbose=False):
+def ISMCTS(rootstate, itermax, strategy='id', verbose=False):
     """
     Conduct an ISMCTS search for itermax iterations starting from rootstate.
 
     Return the best move from the rootstate.
     """
-    rootnode = Node()
+    rootnode = Node(strategy=strategy)
 
     for i in range(itermax):
         node = rootnode
@@ -213,7 +264,8 @@ def ISMCTS(rootstate, itermax, verbose=False):
             player = state.playerToMove
             state.DoMove(m)
             node = node.AddChild(
-                m=m, p=player, isTalonClosed=state.isTalonClosed,
+                m=m, p=player,
+                isTalonClosed=state.isTalonClosed,
                 whoClosedTalon=state.whoClosedTalon
             )  # add child and descend tree
 

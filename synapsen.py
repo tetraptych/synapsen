@@ -38,13 +38,12 @@ def PlayGame(**kwargs):
         print('Player {} played {}!\n'.format(state.playerToMove, move))
         state.DoMove(move)
 
-    someoneWon = False
-    for p in range(1, state.numberOfPlayers + 1):
-        if state.GetResult(p) >= 1.0:
-            print('Player ' + str(p) + ' wins!')
-            someoneWon = True
-    if not someoneWon:
+    if state.winner:
+        print('Player {} wins!'.format(str(state.winner)))
+    else:
         print('Nobody wins!')
+
+    return state
 
 
 def _kwargs_to_players(**kwargs):

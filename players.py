@@ -40,7 +40,7 @@ class Player(object):
 class ComputerPlayer(Player):
     """A player using the ISMCTS algorithm to make moves."""
 
-    def __init__(self, _id, itermax=3000, is_omniscient=False):
+    def __init__(self, _id, itermax=3000, strategy='id', is_omniscient=False):
         """
         Initialize an ISMCTS player.
 
@@ -52,10 +52,16 @@ class ComputerPlayer(Player):
         self.itermax = itermax
         self.type = 'computer'
         self.is_omniscient = is_omniscient
+        self.strategy = strategy
 
     def select_move(self, state, verbose=False):
         """Return a legal move in the game state (but do not make it)."""
-        return ISMCTS(rootstate=state, itermax=self.itermax, verbose=verbose)
+        return ISMCTS(
+            rootstate=state,
+            itermax=self.itermax,
+            strategy=self.strategy,
+            verbose=verbose
+        )
 
 
 class HumanPlayer(Player):

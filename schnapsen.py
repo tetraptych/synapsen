@@ -1,5 +1,8 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Classes specific to the game of Schapsen."""
 import copy
+import math
 import random
 
 from ISMCTS import GameState
@@ -128,8 +131,9 @@ class SchnapsenGameState(GameState):
         self.pointsTaken = {}  # Number of tricks taken by each player this round
         self.isTalonClosed = False
         self.whoClosedTalon = None
-        self.gamePointsAtStake = None
+        self.gamePointsAtStake = {1: 1, 2: 1}
         self.deck = None
+        self.winner = None
         self.Deal()
 
     def Clone(self):
@@ -151,6 +155,7 @@ class SchnapsenGameState(GameState):
         st.whoClosedTalon = self.whoClosedTalon
         st.gamePointsAtStake = self.gamePointsAtStake
         st.deck = copy.deepcopy(self.deck)
+        st.winner = self.winner
         return st
 
     def CloneAndRandomize(self, observer):
@@ -249,9 +254,22 @@ class SchnapsenGameState(GameState):
         Must update playerToMove.
         """
         # Close the talon if part of the current SchnapsenMove.
+        other_player = (self.playerToMove % 2) + 1
+
         if move.close_talon:
             self.isTalonClosed = True
             self.whoClosedTalon = self.playerToMove
+            # FIXME: Account for marriages.
+            game_points_if_closer_wins = 3 - math.ceil(self.pointsTaken[other_player] / 33)
+            game_points_if_closer_loses = {
+                3: 3,
+                2: 2,
+                1: 2
+            }[game_points_if_closer_wins]
+            self.gamePointsAtStake = {
+                self.playerToMove: game_points_if_closer_wins,
+                other_player: game_points_if_closer_loses
+            }
 
         # Check for marriages, updating known information about the game state.
         if move.marriage_points is not None:
@@ -350,6 +368,7 @@ class SchnapsenGameState(GameState):
         currentPoints = self.pointsTaken[self.playerToMove]
         # If the current player has more than 66 points, the game is over.
         if currentPoints >= 66:
+            self.winner = self.playerToMove
             return []
 
         if self.isTalonClosed:
@@ -422,22 +441,30 @@ class SchnapsenGameState(GameState):
         Otherwise, if the talon was closed naturally, the first to 66 wins.
         If neither gets to 66, the last trick wins.
         """
-        # If someone closed the talon, see if that player has >= 66 points
+        other_player = (player % 2) + 1
+        # If someone closed the talon, see if that player has >= 66 points.
         if self.whoClosedTalon is not None:
-            # If the current player closed the talon, they need >= 66 points to win.
-            # If the other player closed the talon, the current player needs them to have < 66.
-            didClosingPlayerGetEnoughPoints = (self.pointsTaken[self.whoClosedTalon] >= 66)
-            if self.whoClosedTalon == player:
-                return float(didClosingPlayerGetEnoughPoints)
+            did_current_player_close_talon = (player == self.whoClosedTalon)
+            did_player_who_closed_talon_win = (self.pointsTaken[self.whoClosedTalon] >= 66)
+            did_current_player_win = (
+                did_current_player_close_talon and did_player_who_closed_talon_win
+            ) or (
+                not did_current_player_close_talon and not did_player_who_closed_talon_win
+            )
+            # If the current player won, give them the points at stake.
+            if did_current_player_win:
+                return float(self.gamePointsAtStake[player])
+            # Otherwise, award the game points to the other player.
             else:
-                return 1.0 - float(didClosingPlayerGetEnoughPoints)
+                return -1.0 * float(self.gamePointsAtStake[other_player])
         else:
-            if any(self.pointsTaken[p] >= 66 for p in self.pointsTaken):
-                # 0 if current player has < 66, 1 otherwise.
-                return float(self.pointsTaken[player] >= 66)
+            if self.pointsTaken[player] >= 66:
+                return 1.0
+            elif self.pointsTaken[other_player] >= 66:
+                return -1.0
             else:
                 # No one made it to 66. playerToMove wins.
-                return float(player == self.playerToMove)
+                return 2.0 * float(player == self.playerToMove) - 1
 
     def __repr__(self):
         """Return a human-readable representation of the state."""
@@ -458,6 +485,7 @@ class SchnapsenGameState(GameState):
         result += ', '.join((' %i: %s' % (player, card)) for (player, card) in self.currentTrick)
         result += ']'
         result += ' | Cards left: {}'.format(len(self.deck))
+        result += ' | Stake: {}'.format(self.gamePointsAtStake)
         result += ' | Empty: ' + ', '.join(
             [
                 'P{}: {}'.format(

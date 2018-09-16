@@ -371,6 +371,13 @@ class SchnapsenGameState(GameState):
             self.winner = self.playerToMove
             return []
 
+        # If no one has cards left, winner of the previous trick wins the game.
+        if len(self.deck) == 0 and len(currentHand) == 0:
+            if len(self.playerHands[self.playerToMove % 2 + 1]) == 0:
+                if max(self.pointsTaken.values()) < 66:
+                    self.winner = self.playerToMove
+                    return []
+
         if self.isTalonClosed:
             # Talon is closed and current player leads.
             # Current player cannot close the talon, but can play any available marriages.

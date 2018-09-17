@@ -131,7 +131,7 @@ class SchnapsenGameState(GameState):
         self.pointsTaken = {}  # Number of tricks taken by each player this round
         self.isTalonClosed = False
         self.whoClosedTalon = None
-        self.gamePointsAtStake = {1: 1, 2: 1}
+        self.gamePointsAtStake = {1: 1.0, 2: 1.0}
         self.deck = None
         self.winner = None
         self.Deal()
@@ -256,15 +256,27 @@ class SchnapsenGameState(GameState):
         # Close the talon if part of the current SchnapsenMove.
         other_player = (self.playerToMove % 2) + 1
 
+        if self.whoClosedTalon is None:
+            game_points_if_current_player_wins = 3.0 - math.ceil(
+                self.pointsTaken[other_player] / 33
+            )
+            game_points_if_other_player_wins = 3.0 - math.ceil(
+                self.pointsTaken[self.playerToMove] / 33
+            )
+            self.gamePointsAtStake = {
+                self.playerToMove: game_points_if_current_player_wins,
+                other_player: game_points_if_other_player_wins
+            }
+
         if move.close_talon:
             self.isTalonClosed = True
             self.whoClosedTalon = self.playerToMove
             # FIXME: Account for marriages.
-            game_points_if_closer_wins = 3 - math.ceil(self.pointsTaken[other_player] / 33)
+            game_points_if_closer_wins = 3.0 - math.ceil(self.pointsTaken[other_player] / 33)
             game_points_if_closer_loses = {
-                3: 3,
-                2: 2,
-                1: 2
+                3.0: 3.0,
+                2.0: 2.0,
+                1.0: 2.0
             }[game_points_if_closer_wins]
             self.gamePointsAtStake = {
                 self.playerToMove: game_points_if_closer_wins,
@@ -472,9 +484,9 @@ class SchnapsenGameState(GameState):
                 return -1.0 * float(self.gamePointsAtStake[other_player])
         else:
             if self.pointsTaken[player] >= 66:
-                return 1.0
+                return self.gamePointsAtStake[player]
             elif self.pointsTaken[other_player] >= 66:
-                return -1.0
+                return -1.0 * float(self.gamePointsAtStake[other_player])
             else:
                 # No one made it to 66. playerToMove wins.
                 return 2.0 * float(player == self.playerToMove) - 1

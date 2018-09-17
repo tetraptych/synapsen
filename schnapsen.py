@@ -284,6 +284,7 @@ class SchnapsenGameState(GameState):
 
             # End game if the marriage puts the current player over 66 points.
             if self.pointsTaken[self.playerToMove] >= 66:
+                self.winner = self.playerToMove
                 return
 
         # Store the played card in the current trick.
@@ -371,10 +372,15 @@ class SchnapsenGameState(GameState):
             self.winner = self.playerToMove
             return []
 
-        # If no one has cards left, winner of the previous trick wins the game.
-        if len(self.deck) == 0 and len(currentHand) == 0:
-            if len(self.playerHands[self.playerToMove % 2 + 1]) == 0:
-                if max(self.pointsTaken.values()) < 66:
+        # Determine winner when no one has any cards left.
+        if max(len(hand) for hand in self.playerHands.values()) == 0:
+            if max(self.pointsTaken.values()) < 66:
+                # If someone closed the talon but no one has 66 points, the other player wins.
+                if self.whoClosedTalon is not None:
+                    self.winner = (self.whoClosedTalon % 2) + 1
+                    return []
+                # If deck is empty and no one has 66 points, current player wins.
+                elif len(self.deck) == 0:
                     self.winner = self.playerToMove
                     return []
 

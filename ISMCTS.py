@@ -149,7 +149,7 @@ class Node:
         """
         Use the UCB1 formula to select a child node, filtered by the given list of legal moves.
 
-        exploration is a constant balancing between exploitation and exploration.
+        `exploration` is a constant balancing between exploitation and exploration.
         """
         # Filter the list of children by the list of legal moves
         legalChildren = [child for child in self.childNodes if child.move in legalMoves]
@@ -170,7 +170,7 @@ class Node:
         # Return the child selected above
         return s
 
-    def AddChild(self, m, p, isTalonClosed, whoClosedTalon):
+    def AddChild(self, m, playerJustMoved, isTalonClosed, whoClosedTalon):
         """
         Add a new child node for the move m.
 
@@ -179,14 +179,14 @@ class Node:
         if whoClosedTalon is not None:
             w = whoClosedTalon
         elif m.close_talon:
-            w = p
+            w = playerJustMoved
         else:
             w = None
 
         n = Node(
             move=m,
             parent=self,
-            playerJustMoved=p,
+            playerJustMoved=playerJustMoved,
             isTalonClosed=isTalonClosed or m.close_talon,
             whoClosedTalon=w,
             strategy=self.strategy
@@ -253,27 +253,30 @@ def ISMCTS(rootstate, itermax, strategy='id', verbose=False):
 
         # Select
         # While: node is fully expanded and non-terminal
-        while state.GetMoves() != [] and node.GetUntriedMoves(state.GetMoves()) == []:
-            node = node.UCBSelectChild(state.GetMoves())
-            state.DoMove(node.move)
+        moves = state.GetMoves()
+        while moves != [] and node.GetUntriedMoves(legalMoves=moves) == []:
+            node = node.UCBSelectChild(legalMoves=moves)
+            state.DoMove(move=node.move)
+            moves = state.GetMoves()
 
         # Expand
-        untriedMoves = node.GetUntriedMoves(state.GetMoves())
+        untriedMoves = node.GetUntriedMoves(legalMoves=moves)
         if untriedMoves != []:  # if we can expand (i.e. state/node is non-terminal)
             m = random.choice(untriedMoves)
             player = state.playerToMove
-            state.DoMove(m)
+            state.DoMove(move=m)
             node = node.AddChild(
-                m=m, p=player,
+                m=m,
+                playerJustMoved=player,
                 isTalonClosed=state.isTalonClosed,
                 whoClosedTalon=state.whoClosedTalon
             )  # add child and descend tree
 
         # Simulate
-        while state.GetMoves() != []:  # while state is non-terminal
+        moves = state.GetMoves()
+        while moves != []:  # while state is non-terminal
+            state.DoMove(move=random.choice(moves))
             moves = state.GetMoves()
-            random_move = random.choice(moves)
-            state.DoMove(random_move)
 
         # Backpropagate
         while node is not None:  # backpropagate from the expanded node and work back to the root

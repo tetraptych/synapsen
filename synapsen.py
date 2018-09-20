@@ -1,5 +1,6 @@
 """Play games of Schnapsen using ISMCTS players."""
 import argparse
+import random
 
 from players import ComputerPlayer, HumanPlayer
 from schnapsen import SchnapsenGameState
@@ -8,8 +9,8 @@ DIFFICULTY_TO_ITERMAX_MAP = {
     'trivial': 1,   # For testing purposes only!
     'easy': 500,
     'medium': 5 * 10**3,
-    'hard': 10**4,
-    'insane': 10**4
+    'hard': 1 * 10**4,
+    'insane': 1 * 10**4
 }
 
 
@@ -124,10 +125,19 @@ def _get_arguments():
         type=str
     )
 
+    parser.add_argument(
+        '-s', '--seed',
+        help='The seed for the random state.',
+        required=False,
+        type=int
+    )
+
     return parser.parse_args().__dict__
 
 
 if __name__ == '__main__':
     arguments = _get_arguments()
     print('Game arguments are {}'.format(arguments))
+    if 'seed' in arguments:
+        random.seed(arguments['seed'])
     PlayGame(**arguments)

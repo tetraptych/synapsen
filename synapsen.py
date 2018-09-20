@@ -8,9 +8,9 @@ from schnapsen import SchnapsenGameState
 DIFFICULTY_TO_ITERMAX_MAP = {
     'trivial': 1,   # For testing purposes only!
     'easy': 500,
-    'medium': 5 * 10**3,
-    'hard': 1 * 10**4,
-    'insane': 1 * 10**4
+    'medium': 1500,
+    'hard': 5000,
+    'insane': 5000
 }
 
 

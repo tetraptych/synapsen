@@ -232,7 +232,7 @@ class Node:
     def ChildrenToString(self):
         """Represent children as strings for debugging purposes."""
         s = ""
-        for c in self.childNodes:
+        for c in sorted(self.childNodes, key=lambda node: node.visits, reverse=True):
             s += str(c) + "\n"
         return s
 
